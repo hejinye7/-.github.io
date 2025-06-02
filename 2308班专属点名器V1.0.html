@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2308班专属点名器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, system-ui, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(rgba(255,255,255,0.9), rgba(255,255,255,0.9)), 
+                        url('https://haowallpaper.com/link/common/file/previewFileImg/16650315070164352');
+            background-size: cover;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* 标题区 */
+        .header {
+            text-align: center;
+            margin: 30px 0;
+            animation: fadeIn 0.6s ease-out;
+        }
+        .title {
+            font-size: 32px;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* 状态显示 */
+        .status-box {
+            background: rgba(255,255,255,0.9);
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            margin: 20px 0;
+            text-align: center;
+        }
+        #result {
+            font-size: 22px;
+            color: #7f8c8d;
+            margin: 15px 0;
+            min-height: 60px;
+        }
+        #clock {
+            color: #95a5a6;
+            font-size: 16px;
+        }
+
+        /* 操作按钮 */
+        .btn-group {
+            display: grid;
+            gap: 15px;
+            margin-top: 30px;
+        }
+        .btn {
+            padding: 16px 24px;
+            border: none;
+            border-radius: 12px;
+            background: #fff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+        }
+        .btn-primary {
+            background: #4CAF50;
+            color: white;
+        }
+        .btn-danger {
+            background: #f44336;
+            color: white;
+        }
+
+        /* 弹窗 */
+        .modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px 40px;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            z-index: 100;
+            animation: modalIn 0.3s ease-out;
+        }
+        #countInput {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #4CAF50;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-size: 16px;
+            text-align: center;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes modalIn {
+            from { opacity: 0; transform: translate(-50%, -40%); }
+            to { opacity: 1; transform: translate(-50%, -50%); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="title">2308班专属点名器</h1>
+            <div class="status-box">
+                <div id="result">- 等待抽选 -</div>
+                <div id="clock">2025/05/09 20:55:21</div>
+            </div>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn" onclick="showModal()">连抽模式</button>
+            <button class="btn btn-primary" onclick="singleDraw()">开始抽选</button>
+            </div>
+    </div>
+
+    <!-- 连抽弹窗 -->
+    <div id="batchModal" class="modal" style="display: none;">
+        <input type="number" id="countInput" placeholder="输入抽取人数（1-28）" min="1" max="38">
+        <div class="btn-group">
+            <button class="btn btn-primary" onclick="batchDraw()">开始连抽</button>
+            <button class="btn btn-danger" onclick="hideModal()">取消</button>
+        </div>
+    </div>
+
+    <script>
+        const names = [
+            '刘晟轩', '郭近轩', '申宇俊', '白子实', '杨凯渊', 
+            '杨锦博', '王丽', '李政宏', '张一诺', '鞠东林',
+            '田阔野', '梁子萱', '张馨月', '刘夏青青', '王玥彤',
+            '张田思雨', '刘峻琪', '苗宇霞', '李梦雪', '孙浩博',
+            '程心怡', '贺宇帆', '曹国朝', '杨沛珊', '周星浩',
+            '裴勇俊', '任子橙', '张天娇'
+        ];
+        let lastResult = null;
+        let currentMode = 'single';
+
+        // 实时时钟
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').textContent = 
+                `${now.getFullYear()}/${(now.getMonth()+1).toString().padStart(2,'0')}/` +
+                `${now.getDate().toString().padStart(2,'0')} ` +
+                `${now.getHours().toString().padStart(2,'0')}:` +
+                `${now.getMinutes().toString().padStart(2,'0')}:` +
+                `${now.getSeconds().toString().padStart(2,'0')}`;
+        }
+        setInterval(updateClock, 1000);
+
+        // 弹窗控制
+        function showModal() {
+            document.getElementById('batchModal').style.display = 'block';
+            currentMode = 'batch';
+        }
+        function hideModal() {
+            document.getElementById('batchModal').style.display = 'none';
+        }
+
+        // 单次抽选
+        function singleDraw() {
+            const available = names.filter(n => n !== lastResult);
+            lastResult = available[Math.floor(Math.random() * available.length)];
+            showResult([lastResult]);
+            currentMode = 'single';
+        }
+
+        // 连抽逻辑
+        function batchDraw() {
+            const count = parseInt(document.getElementById('countInput').value);
+            if (count > 28 || count < 1) {
+                alert('请输入1-28之间的数字');
+                return;
+            }
+
+            const shuffled = [...names].sort(() => Math.random() - 0.5);
+            const results = shuffled.slice(0, count);
+            showResult(results);
+            hideModal();
+        }
+
+        // 重新抽选
+        function redraw() {
+            currentMode === 'single' ? singleDraw() : batchDraw();
+        }
+
+        // 结果显示
+        function showResult(results) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.animation = 'fadeIn 0.6s';
+            
+            if (results.length > 1) {
+                resultDiv.innerHTML = `连抽结果：<br>${results.join('<br>')}`;
+            } else {
+                resultDiv.textContent = results[0] || '- 等待抽选 -';
+            }
+        }
+    </script>
+</body>
+</html>
